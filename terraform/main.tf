@@ -83,6 +83,13 @@ resource "google_project_iam_member" "cloudrun_sa_monitoring" {
   member  = "serviceAccount:${google_service_account.cloudrun_sa.email}"
 }
 
+# Create invoker service account for accessing the service
+resource "google_service_account" "invoker_sa" {
+  account_id   = "${var.app_name}-invoker-sa"
+  display_name = "Service Account for invoking ${var.app_name}"
+  description  = "Service account with permission to invoke the text analyzer service"
+}
+
 # Cloud Run service
 resource "google_cloud_run_v2_service" "app_service" {
   name     = var.app_name
@@ -99,6 +106,12 @@ resource "google_cloud_run_v2_service" "app_service" {
     scaling {
       min_instance_count = 0
       max_instance_count = 10
+    }
+
+    # VPC Access for internal networking
+    vpc_access {
+      connector = google_vpc_access_connector.connector.id
+      egress    = "PRIVATE_RANGES_ONLY"
     }
 
     containers {
@@ -153,20 +166,18 @@ resource "google_cloud_run_v2_service" "app_service" {
   }
 }
 
-# Configure Cloud Run to allow internal traffic only
-resource "google_cloud_run_v2_service_iam_member" "internal_access" {
+# SECURITY: Configure Cloud Run for internal access only
+# Grant access only to specific service account (not allUsers)
+resource "google_cloud_run_v2_service_iam_member" "invoker_access" {
   project  = var.project_id
   location = google_cloud_run_v2_service.app_service.location
   name     = google_cloud_run_v2_service.app_service.name
   role     = "roles/run.invoker"
-  member   = "allUsers"
-  
-  # Note: In a production environment, you would restrict this further
-  # For example, to specific service accounts or VPC networks
-  # member = "serviceAccount:${var.invoker_service_account_email}"
+  member   = "serviceAccount:${google_service_account.invoker_sa.email}"
 }
 
-# VPC connector (already created successfully)
+
+# VPC connector for secure networking
 resource "google_vpc_access_connector" "connector" {
   name          = "${var.app_name}-connector"
   region        = var.region

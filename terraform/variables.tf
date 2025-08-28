@@ -26,3 +26,9 @@ variable "image_tag" {
   type        = string
   default     = "latest"
 }
+
+variable "enable_cicd_access" {
+  description = "Enable Cloud Build service account access for CI/CD"
+  type        = bool
+  default     = true
+}
