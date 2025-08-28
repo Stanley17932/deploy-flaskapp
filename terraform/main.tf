@@ -47,13 +47,19 @@ resource "google_project_service" "iam_api" {
   disable_on_destroy         = false
 }
 
-# Create Artifact Registry repository
-resource "google_artifact_registry_repository" "app_repo" {
+resource "google_project_service" "vpcaccess_api" {
+  project = var.project_id
+  service = "vpcaccess.googleapis.com"
+
+  disable_dependent_services = false
+  disable_on_destroy         = false
+}
+
+# Use existing Artifact Registry repository (deploy-flaskapp)
+data "google_artifact_registry_repository" "app_repo" {
   location      = var.region
   repository_id = var.artifact_registry_repo
-  description   = "Repository for text analyzer application images"
-  format        = "DOCKER"
-
+  
   depends_on = [google_project_service.artifact_registry_api]
 }
 
@@ -102,9 +108,10 @@ resource "google_cloud_run_v2_service" "app_service" {
         container_port = 8080
       }
 
+      # Custom environment variables only (PORT is reserved by Cloud Run)
       env {
-        name  = "PORT"
-        value = "8080"
+        name  = "ENVIRONMENT"
+        value = "production"
       }
 
       resources {
@@ -159,12 +166,15 @@ resource "google_cloud_run_v2_service_iam_member" "internal_access" {
   # member = "serviceAccount:${var.invoker_service_account_email}"
 }
 
-# Create a VPC connector for private networking (optional but recommended)
+# VPC connector (already created successfully)
 resource "google_vpc_access_connector" "connector" {
   name          = "${var.app_name}-connector"
   region        = var.region
   ip_cidr_range = "10.8.0.0/28"
   network       = "default"
   
-  depends_on = [google_project_service.cloudrun_api]
+  depends_on = [
+    google_project_service.cloudrun_api,
+    google_project_service.vpcaccess_api
+  ]
 }
