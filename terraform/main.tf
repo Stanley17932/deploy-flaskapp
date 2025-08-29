@@ -59,7 +59,7 @@ resource "google_project_service" "vpcaccess_api" {
 data "google_artifact_registry_repository" "app_repo" {
   location      = var.region
   repository_id = var.artifact_registry_repo
-  
+
   depends_on = [google_project_service.artifact_registry_api]
 }
 
@@ -94,7 +94,7 @@ resource "google_service_account" "invoker_sa" {
 resource "google_cloud_run_v2_service" "app_service" {
   name     = var.app_name
   location = var.region
-  
+
   depends_on = [
     google_project_service.cloudrun_api,
     google_service_account.cloudrun_sa
@@ -102,7 +102,7 @@ resource "google_cloud_run_v2_service" "app_service" {
 
   template {
     service_account = google_service_account.cloudrun_sa.email
-    
+
     scaling {
       min_instance_count = 0
       max_instance_count = 10
@@ -116,7 +116,7 @@ resource "google_cloud_run_v2_service" "app_service" {
 
     containers {
       image = "${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_registry_repo}/${var.app_name}:${var.image_tag}"
-      
+
       ports {
         container_port = 8080
       }
@@ -132,7 +132,7 @@ resource "google_cloud_run_v2_service" "app_service" {
           cpu    = "1"
           memory = "512Mi"
         }
-        cpu_idle = true
+        cpu_idle          = true
         startup_cpu_boost = false
       }
 
@@ -142,9 +142,9 @@ resource "google_cloud_run_v2_service" "app_service" {
           port = 8080
         }
         initial_delay_seconds = 10
-        timeout_seconds      = 5
-        period_seconds       = 10
-        failure_threshold    = 3
+        timeout_seconds       = 5
+        period_seconds        = 10
+        failure_threshold     = 3
       }
 
       liveness_probe {
@@ -153,9 +153,9 @@ resource "google_cloud_run_v2_service" "app_service" {
           port = 8080
         }
         initial_delay_seconds = 15
-        timeout_seconds      = 5
-        period_seconds       = 10
-        failure_threshold    = 3
+        timeout_seconds       = 5
+        period_seconds        = 10
+        failure_threshold     = 3
       }
     }
   }
@@ -176,14 +176,13 @@ resource "google_cloud_run_v2_service_iam_member" "invoker_access" {
   member   = "serviceAccount:${google_service_account.invoker_sa.email}"
 }
 
-
 # VPC connector for secure networking
 resource "google_vpc_access_connector" "connector" {
   name          = "${var.app_name}-connector"
   region        = var.region
   ip_cidr_range = "10.8.0.0/28"
   network       = "default"
-  
+
   depends_on = [
     google_project_service.cloudrun_api,
     google_project_service.vpcaccess_api
