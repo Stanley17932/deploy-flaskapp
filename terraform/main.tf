@@ -50,3 +50,20 @@ resource "google_cloud_run_v2_service_iam_member" "invoker_access" {
   role     = "roles/run.invoker"
   member   = "serviceAccount:${data.google_service_account.invoker_sa.email}"
 }
+
+# NEW: Grant CI/CD service account access for testing
+# Extract service account email from the GCP_SA_KEY secret
+# This assumes your CI/CD service account follows standard naming
+locals {
+  # Extract project ID for service account email construction
+  cicd_sa_email = var.enable_cicd_access ? "github-actions-sa@${var.project_id}.iam.gserviceaccount.com" : null
+}
+
+resource "google_cloud_run_v2_service_iam_member" "cicd_invoker_access" {
+  count    = var.enable_cicd_access ? 1 : 0
+  project  = var.project_id
+  location = data.google_cloud_run_v2_service.app_service.location
+  name     = data.google_cloud_run_v2_service.app_service.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${local.cicd_sa_email}"
+}
