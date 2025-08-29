@@ -10,7 +10,12 @@ output "artifact_registry_repo_url" {
 
 output "service_account_email" {
   description = "Email of the Cloud Run service account"
-  value       = google_service_account.cloudrun_sa.email
+  value       = data.google_service_account.cloudrun_sa.email
+}
+
+output "invoker_service_account_email" {
+  description = "Email of the invoker service account"
+  value       = data.google_service_account.invoker_sa.email
 }
 
 output "project_id" {
