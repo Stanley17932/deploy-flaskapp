@@ -129,17 +129,24 @@ jobs:
           SERVICE_URL=$(gcloud run services describe $SERVICE --platform=managed --region=$REGION --format="value(status.url)")
           echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_OUTPUT
 
-      - name: Test deployed service
+      - name: Test deployed service with authentication
         run: |
           # Wait a moment for service to be ready
           sleep 30
           
-          # Test the health endpoint
-          curl -f ${{ steps.deploy.outputs.SERVICE_URL }}/health || exit 1
+          # Get authentication token for the CI/CD service account
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
           
-          # Test the analyze endpoint
-          curl -X POST ${{ steps.deploy.outputs.SERVICE_URL }}/analyze \
+          # Test the health endpoint with authentication
+          echo "Testing health endpoint..."
+          curl -f -H "Authorization: Bearer $ACCESS_TOKEN" ${{ steps.deploy.outputs.SERVICE_URL }}/health || exit 1
+          
+          # Test the analyze endpoint with authentication
+          echo "Testing analyze endpoint..."
+          curl -X POST \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
-            -d '{"text": "Hello Cloud Run!"}' || exit 1
+            -d '{"text": "Hello Cloud Run!"}' \
+            ${{ steps.deploy.outputs.SERVICE_URL }}/analyze || exit 1
           
           echo "Deployment successful! Service URL: ${{ steps.deploy.outputs.SERVICE_URL }}"
