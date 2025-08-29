@@ -32,3 +32,9 @@ variable "enable_cicd_access" {
   type        = bool
   default     = true
 }
+
+variable "cicd_service_account_email" {
+  description = "Email of the CI/CD service account for GitHub Actions"
+  type        = string
+  default     = "github-actions-deploy@agile-falcon-463808-g6.iam.gserviceaccount.com"
+}
